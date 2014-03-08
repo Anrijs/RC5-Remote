@@ -19,6 +19,7 @@ uint32_t Data = 0x00000000;
 __IO FLASH_Status FLASHStatus = FLASH_COMPLETE;
 __IO TestStatus MemoryProgramStatus = PASSED;
 
+// Default RC5 values
 uint16_t remote_data[] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
                           0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
                           0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
@@ -73,11 +74,6 @@ void rc5_mode() {
 
 void rc5_serial_mode() {
   USART2_init();
-  
-
-
-printf ("Press a key. ");
-  char ces = 'x';
   
   while(1) {
   //USART2_put('a');
