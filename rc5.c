@@ -56,8 +56,6 @@ void status_blink(uint8_t count) {
   }
 }
 
-
-
 void rc5_mode_2() {
   // TODO:
   //   Wait for button click
@@ -75,9 +73,7 @@ void rc5_mode() {
 void rc5_serial_mode() {
   USART2_init();
   
-  while(1) {
-  //USART2_put('a');
-    // 170:: ¬x `                
+  while(1) {              
 #ifdef TERMINAL_DEBUG 
     USART2_writeln("Input method:");
     char c = USART2_get();
@@ -146,19 +142,9 @@ void rc5_serial_mode() {
         char f = USART2_get();
         char g = USART2_get();
 #endif
-
-        USART2_put(e);
-        USART2_put(f);
-        USART2_put(g);
         rc5_config_write((e*8)+f,  d, g);
       }
       
-      /*
-        0xbb 0x01 #<rmd> #<btn> #<bmd>
-        0xbb 0x02 #<rmd> #<btn> #<cmd>
-        0xbb 0x03 #<rmd> #<btn> #<addr>
-      */
-      // Write command(d) remode_mode(e) button(f) button_mode(g)
     }
   }
   // TODO:
@@ -176,12 +162,7 @@ void rc5_serial_mode() {
 }
 
 void rc5_config_write(uint8_t addr, uint8_t cmd, uint16_t value) {
-  /*
-    0xbb 0x01 #<rmd> #<btn> #<bmd>
-    0xbb 0x03 #<rmd> #<btn> #<cmd>
-    0xbb 0x02 #<rmd> #<btn> #<addr>
-  */
-  
+
   uint16_t temp = remote_data[addr];
   
   switch (cmd) {
@@ -214,7 +195,6 @@ void rc5_config_write(uint8_t addr, uint8_t cmd, uint16_t value) {
 void set_remote_data(uint8_t id, uint16_t value) {
   remote_data[id] = value;
 }
-
 
 void get_remote_data(void) {
   Address = FLASH_USER_START_ADDR;

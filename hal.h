@@ -24,5 +24,6 @@ void USART2_put(uint8_t ch);
 void USART2_write(char *text);
 void USART2_write_num(uint8_t num);
 void USART2_newline();
+void USART2_writeln();
 
 #endif
