@@ -7,7 +7,7 @@
 typedef enum {FAILED = 0, PASSED = !FAILED} TestStatus;
 #define FLASH_PAGE_SIZE         ((uint32_t)0x00000002)   /* FLASH Page Size */
 #define FLASH_USER_START_ADDR   ((uint32_t)0x08006000)   /* Start @ of user Flash area */
-#define FLASH_USER_END_ADDR     ((uint32_t)0x08007041)   /* End @ of user Flash area */
+#define FLASH_USER_END_ADDR     ((uint32_t)0x08006041)   /* End @ of user Flash area */
 #define DATA_32                 ((uint32_t)0x12345678)
 
 // User flash is defined to 32x 16bit fields
@@ -55,6 +55,8 @@ void status_blink(uint8_t count) {
   }
 }
 
+
+
 void rc5_mode_2() {
   // TODO:
   //   Wait for button click
@@ -71,6 +73,10 @@ void rc5_mode() {
 
 void rc5_serial_mode() {
   USART2_init();
+  
+
+
+printf ("Press a key. ");
   char ces = 'x';
   
   while(1) {
@@ -91,7 +97,6 @@ void rc5_serial_mode() {
         USART2_put(i+48);
         USART2_put(':');
         USART2_newline();
-       // uint8_t temp = 
         USART2_write(" - Mode: ");
         USART2_write_num(remote_data[i] >> 13);
         USART2_write(" Address: ");
@@ -106,7 +111,7 @@ void rc5_serial_mode() {
       USART2_newline();
       for(int i=8;i<16;i++){
         USART2_write("Button "); 
-        USART2_put(i+48);
+        USART2_put(i+40);
         USART2_put(':');
         USART2_newline();
        // uint8_t temp = 
