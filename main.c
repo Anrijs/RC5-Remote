@@ -35,9 +35,7 @@ int main(void)
 #ifdef BOOT_CONFIG_PIN
   if (GPIO_ReadInputDataBit(BOOT_CONFIG_GPIO, BOOT_CONFIG_PIN)) {
     mode = 3;
-    // FLash!   aa
     get_remote_data();
-
   }
 #endif
 
