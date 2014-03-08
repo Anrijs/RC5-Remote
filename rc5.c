@@ -7,7 +7,7 @@
 typedef enum {FAILED = 0, PASSED = !FAILED} TestStatus;
 #define FLASH_PAGE_SIZE         ((uint32_t)0x00000002)   /* FLASH Page Size */
 #define FLASH_USER_START_ADDR   ((uint32_t)0x08006000)   /* Start @ of user Flash area */
-#define FLASH_USER_END_ADDR     ((uint32_t)0x08006041)   /* End @ of user Flash area */
+#define FLASH_USER_END_ADDR     ((uint32_t)0x08007041)   /* End @ of user Flash area */
 #define DATA_32                 ((uint32_t)0x12345678)
 
 // User flash is defined to 32x 16bit fields
@@ -19,10 +19,10 @@ uint32_t Data = 0x00000000;
 __IO FLASH_Status FLASHStatus = FLASH_COMPLETE;
 __IO TestStatus MemoryProgramStatus = PASSED;
 
-uint16_t remote_data[] = {0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x10,
-                        0x11,0x12,0x13,0x14,0x15,0x16,0x17,0x18,0x19,0x20,
-                        0x21,0x22,0x23,0x24,0x25,0x26,0x27,0x28,0x29,0x30,
-                        0x30,0x31,0x32};
+uint16_t remote_data[] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+                          0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+                          0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+                          0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
 
 void status_blink(uint8_t count) {
   for(;count>0;count--) {
@@ -85,15 +85,38 @@ void rc5_serial_mode() {
   if(c == 97) {
     if(d == 97) {
       USART2_write("MODE1");
-      USART2_put('\n');
+      USART2_newline();
       for(int i=0;i<8;i++){
         USART2_write("Button "); 
         USART2_put(i+48);
         USART2_put(':');
-        USART2_put('\n');
-        USART2_write("Mode: ");
-        USART2_write("Address: "); 
-        USART2_write("Command: "); 
+        USART2_newline();
+       // uint8_t temp = 
+        USART2_write(" - Mode: ");
+        USART2_write_num(remote_data[i] >> 13);
+        USART2_write(" Address: ");
+        USART2_write_num((remote_data[i] >> 8) & 0x1F);
+        USART2_write(" Command: "); 
+        USART2_write_num(remote_data[i] & 0x00FF);
+        USART2_newline();
+      }
+      
+      USART2_write("MODE2");
+      USART2_newline();
+      USART2_newline();
+      for(int i=8;i<16;i++){
+        USART2_write("Button "); 
+        USART2_put(i+48);
+        USART2_put(':');
+        USART2_newline();
+       // uint8_t temp = 
+        USART2_write(" - Mode: ");
+        USART2_write_num(remote_data[i] >> 13);
+        USART2_write(" Address: ");
+        USART2_write_num((remote_data[i] >> 8) & 0x1F);
+        USART2_write(" Command: "); 
+        USART2_write_num(remote_data[i] & 0x00FF);
+        USART2_newline();
       }
     }
     else if(d == 0x02) {

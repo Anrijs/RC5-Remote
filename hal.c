@@ -66,11 +66,13 @@ void USART2_init() {
 
 void USART2_put(uint8_t ch)
 {
-  while (USART_GetFlagStatus(USART2, USART_FLAG_TXE) == RESET);
   USART_SendData(USART2, (uint8_t) ch);
+  // Loop until the end of transmittion
+  while(USART_GetFlagStatus(USART2, USART_FLAG_TC) == RESET);
 }
 
 uint8_t USART2_get(void){
+  // Wait for data
   while (USART_GetFlagStatus(USART2, USART_FLAG_RXNE) == RESET);
   return USART_ReceiveData(USART2);
 }
@@ -81,6 +83,28 @@ void USART2_write(char *text) {
     USART2_put(text[i]);
     i++;
   } 
+}
+
+void USART2_newline()
+{
+  USART2_put('\n');
+  USART2_put('\r');
+}
+
+void USART2_write_num(uint8_t num) {
+  uint8_t text[4];
+  uint8_t pos = 0;
+  while(num > 10) {
+    text[pos] = (num%10)+48;
+    pos++;
+    num = num/10;
+  }
+  text[pos] = num+48;
+  pos++;
+  for(;pos>0;pos--) {
+    USART2_put(text[pos-1]);
+  }
+  ;
 }
 
 // this function initializes the SPI1 peripheral
