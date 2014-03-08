@@ -77,61 +77,89 @@ void rc5_serial_mode() {
   
   while(1) {
   //USART2_put('a');
-    // 170:: ¬x `               
-  char c;
-  char d;  
+    // 170:: ¬x `                
+#ifdef TERMINAL_DEBUG 
+    USART2_writeln("Input method:");
+    char c = USART2_get();
+    USART2_writeln("Input command:");
+    char d = USART2_get();
+#else
+    char c = USART2_get();
+    char d = USART2_get();
+#endif
   
-  c = USART2_get();
-  d = USART2_get();
-  
-  if(c == 97) {
-    if(d == 97) {
-      USART2_write("MODE1");
-      USART2_newline();
-      for(int i=0;i<8;i++){
-        USART2_write("Button "); 
-        USART2_put(i+48);
-        USART2_put(':');
+    if(c == 0xaa) {
+      if(d == 0x01) {
+        USART2_write("MODE1");
         USART2_newline();
-        USART2_write(" - Mode: ");
-        USART2_write_num(remote_data[i] >> 13);
-        USART2_write(" Address: ");
-        USART2_write_num((remote_data[i] >> 8) & 0x1F);
-        USART2_write(" Command: "); 
-        USART2_write_num(remote_data[i] & 0x00FF);
+        for(int i=0;i<8;i++){
+          USART2_write("Button "); 
+          USART2_put(i+48);
+          USART2_put(':');
+          USART2_newline();
+          USART2_write(" - Mode: ");
+          USART2_write_num(remote_data[i] >> 13);
+          USART2_write(" Address: ");
+          USART2_write_num((remote_data[i] >> 8) & 0x1F);
+          USART2_write(" Command: "); 
+          USART2_write_num(remote_data[i] & 0x00FF);
+          USART2_newline();
+        }
+      
+        USART2_write("MODE2");
         USART2_newline();
+        USART2_newline();
+        for(int i=8;i<16;i++){
+          USART2_write("Button "); 
+          USART2_put(i+40);
+          USART2_put(':');
+          USART2_newline();
+         // uint8_t temp = 
+          USART2_write(" - Mode: ");
+          USART2_write_num(remote_data[i] >> 13);
+          USART2_write(" Address: ");
+          USART2_write_num((remote_data[i] >> 8) & 0x1F);
+          USART2_write(" Command: "); 
+          USART2_write_num(remote_data[i] & 0x00FF);
+          USART2_newline();
+        }
+      }
+      else if(d == 0x02) {
+        //Export compact
+      }
+    }
+    else if(c == 0xbb) {     
+      if(d == 0x04) {
+        post_remote_data();
+      }
+      else {
+        
+#ifdef TERMINAL_DEBUG
+        USART2_writeln("Mode:");
+        char e = USART2_get();
+        USART2_writeln("Button:");
+        char f = USART2_get();
+        USART2_writeln("Value:");
+        char g = USART2_get();
+#else
+        char e = USART2_get();
+        char f = USART2_get();
+        char g = USART2_get();
+#endif
+
+        USART2_put(e);
+        USART2_put(f);
+        USART2_put(g);
+        rc5_config_write((e*8)+f,  d, g);
       }
       
-      USART2_write("MODE2");
-      USART2_newline();
-      USART2_newline();
-      for(int i=8;i<16;i++){
-        USART2_write("Button "); 
-        USART2_put(i+40);
-        USART2_put(':');
-        USART2_newline();
-       // uint8_t temp = 
-        USART2_write(" - Mode: ");
-        USART2_write_num(remote_data[i] >> 13);
-        USART2_write(" Address: ");
-        USART2_write_num((remote_data[i] >> 8) & 0x1F);
-        USART2_write(" Command: "); 
-        USART2_write_num(remote_data[i] & 0x00FF);
-        USART2_newline();
-      }
+      /*
+        0xbb 0x01 #<rmd> #<btn> #<bmd>
+        0xbb 0x02 #<rmd> #<btn> #<cmd>
+        0xbb 0x03 #<rmd> #<btn> #<addr>
+      */
+      // Write command(d) remode_mode(e) button(f) button_mode(g)
     }
-    else if(d == 0x02) {
-      //Export compact
-    }
-  }
-  else if(c == 0xbb) {
-    char e = USART2_get();
-    char f = USART2_get();
-    char g = USART2_get();
-    
-    rc5_config_write((e*8)+f,  0, 0);
-    // Write command(d) remode_mode(e) button(f) button_mode(g)
-  }
   }
   // TODO:
   //   Wait for request
@@ -147,22 +175,40 @@ void rc5_serial_mode() {
   
 }
 
-void rc5_config_write(uint8_t addr, uint8_t cmd, uint8_t value) {
-  /* Setup STM32 system (clock, PLL and Flash configuration) */
-  //SystemInit();
-  //FLASH_Unlock();
-  ////EE_Init();  
+void rc5_config_write(uint8_t addr, uint8_t cmd, uint16_t value) {
+  /*
+    0xbb 0x01 #<rmd> #<btn> #<bmd>
+    0xbb 0x03 #<rmd> #<btn> #<cmd>
+    0xbb 0x02 #<rmd> #<btn> #<addr>
+  */
   
-  //uint16_t val = EE_ReadVariable(VirtAddVarTab[addr], value);
+  uint16_t temp = remote_data[addr];
   
   switch (cmd) {
-    case 1: break;
-    case 2: break;
-    case 3: break;
+    case 1: 
+      temp = temp & 0x1FFF;
+      temp = (value << 13) | temp;
+      remote_data[addr] = temp;
+      break;
+    case 2: 
+      temp = temp & 0xE0FF;
+      temp = (value << 8) | temp;
+      remote_data[addr] = temp;
+      break;
+    case 3: 
+      temp = temp & 0xFF00;
+      temp = value | temp;
+      remote_data[addr] = temp;
+      break;
   }
-  
-  //EE_WriteVariable(VirtAddVarTab[addr], val);
-  //FLASH_Lock();
+   USART2_write(" - Mode: ");
+          USART2_write_num(remote_data[addr] >> 13);
+          USART2_write(" Address: ");
+          USART2_write_num((remote_data[addr] >> 8) & 0x1F);
+          USART2_write(" Command: "); 
+          USART2_write_num(remote_data[addr] & 0x00FF);
+          USART2_newline(); 
+   USART2_writeln("Updated");
 }
 
 void set_remote_data(uint8_t id, uint16_t value) {

@@ -21,4 +21,7 @@
 /* Enable if used wor windows terminal (will add '\r' after newline)*/
 #define WINDOWS_TERMINAL
 
+/* Enable for debuging in terminal */
+#define TERMINAL_DEBUG
+
 #endif

@@ -116,6 +116,11 @@ void USART2_write(char *text) {
   }
 }
 
+void USART2_writeln(char *text) {
+  USART2_write(text);
+  USART2_newline();
+}
+
 /**
   * @brief  Sends newline to USART2 Tx
   * @param  None
