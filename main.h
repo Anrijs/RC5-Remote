@@ -10,4 +10,6 @@
 #include "rc5.h"
 #include "config.h"
 
+int main(void);
+
 #endif

@@ -11,6 +11,11 @@ void TimingDelay_Decrement(void);
 void Delay(__IO uint32_t nTime);
 void mx_pinout_config(void);
 
+void TIM1_init();
+void TIM1_config();
+
+void RC5_cmd();
+
 void SPI1_init();     // Initialize SPI1
 void SPI1_enable();   // Enable chip on SPI1                   
 void SPI1_disable();  // Disable chip on SPI1

@@ -63,11 +63,19 @@ void rc5_mode_2() {
 }
 
 void rc5_mode_1() {
-  while(1) {}
+  TIM1_init();
+  TIM1_config();
+  while(1) {
+    RC5_cmd();
+    Delay(2);
+  }
 }
 
 void rc5_mode() {
   //
+  
+  
+  
 }
 
 void rc5_serial_mode() {
@@ -84,8 +92,8 @@ void rc5_serial_mode() {
     char d = USART2_get();
 #endif
   
-    if(c == 0xaa) {
-      if(d == 0x01) {
+    if(c == 0xaa || c == 'a') {
+      if(d == 0x01 || d == '1') {
         USART2_write("MODE1");
         USART2_newline();
         for(int i=0;i<8;i++){

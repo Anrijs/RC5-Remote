@@ -3,6 +3,16 @@
 static __IO uint32_t TimingDelay;
 void status_blink(uint8_t);
 
+TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
+TIM_OCInitTypeDef  TIM_OCInitStructure;
+
+uint8_t tim_irq_flag = 0;
+
+uint16_t TimerPeriod = 0;
+uint16_t TimerPeriodd = 0;
+uint16_t IR_Pulse = 0;
+uint8_t IR_cycles = 0;
+
 /*----------------------------------------------------------------------------*/
 /*                                    GPIO                                    */
 /*----------------------------------------------------------------------------*/
@@ -34,6 +44,33 @@ void mx_pinout_config(void) {
   /* SysTick end of count event each 1ms */
   RCC_GetClocksFreq(&RCC_Clocks);
   SysTick_Config(RCC_Clocks.HCLK_Frequency / 1000);
+  
+  /* Connect EXTI0 Line to PA0 pin */
+  SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOA, EXTI_PinSource0);
+  
+  /* Set up interrupts */
+  EXTI_InitTypeDef   EXTI_InitStructure;
+  NVIC_InitTypeDef   NVIC_InitStructure;
+  
+  /* Configure EXTI0 line */
+  EXTI_InitStructure.EXTI_Line = EXTI_Line0;
+  EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
+  EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Rising;
+  EXTI_InitStructure.EXTI_LineCmd = ENABLE;
+  EXTI_Init(&EXTI_InitStructure);
+
+  /* Enable and set EXTI0 Interrupt */
+  NVIC_InitStructure.NVIC_IRQChannel = EXTI0_1_IRQn;
+  NVIC_InitStructure.NVIC_IRQChannelPriority = 0x00;
+  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+  NVIC_Init(&NVIC_InitStructure);
+}
+
+void EXTI0_1_IRQHandler (void)
+{
+  EXTI_ClearITPendingBit(EXTI_Line0);
+  EXTI_ClearFlag(EXTI_Line0);
+  RC5_cmd();
 }
 
 /*----------------------------------------------------------------------------*/
@@ -237,6 +274,86 @@ void SPI1_enable() {
 
 void SPI1_disable() {
    GPIO_WriteBit(GPIOB, GPIO_Pin_0, Bit_RESET);
+}
+
+/*----------------------------------------------------------------------------*/
+/*                              TIM1 functions                                */
+/*----------------------------------------------------------------------------*/
+
+void TIM1_init() {
+  GPIO_InitTypeDef GPIO_InitStructure;
+
+  /* GPIOA Clocks enable */
+  RCC_AHBPeriphClockCmd( RCC_AHBPeriph_GPIOA, ENABLE);
+  
+  /* GPIOA Configuration: Channel 1, 2, 3 and 4 as alternate function push-pull */
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP ;
+  GPIO_Init(GPIOA, &GPIO_InitStructure);
+  
+  GPIO_PinAFConfig(GPIOA, GPIO_PinSource10, GPIO_AF_2);
+}
+
+void TIM1_config() {
+    /* Compute the value to be set in ARR regiter to generate signal frequency at 36.00 Khz */
+  TimerPeriod = (SystemCoreClock / 36000 ) - 1;
+  /* Compute CCR3 value to generate a duty cycle at 25%  for channel 3 */
+  IR_Pulse = (uint16_t) (((uint32_t) 75 * (TimerPeriod - 1)) / 100);
+
+
+  /* TIM1 clock enable */
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM1 , ENABLE);
+  
+  /* Time Base configuration */
+  TIM_TimeBaseStructure.TIM_Prescaler = 0;
+  TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
+  TIM_TimeBaseStructure.TIM_Period = TimerPeriod;
+  TIM_TimeBaseStructure.TIM_ClockDivision = 0;
+  TIM_TimeBaseStructure.TIM_RepetitionCounter = 0;
+
+  TIM_TimeBaseInit(TIM1, &TIM_TimeBaseStructure);
+
+  /* Channel 1, 2, 3 and 4 Configuration in PWM mode */
+  TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM1;
+  TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
+  TIM_OCInitStructure.TIM_OutputNState = TIM_OutputNState_Enable;
+  TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_Low;
+  TIM_OCInitStructure.TIM_OCNPolarity = TIM_OCNPolarity_High;
+  TIM_OCInitStructure.TIM_OCIdleState = TIM_OCIdleState_Set;
+  TIM_OCInitStructure.TIM_OCNIdleState = TIM_OCIdleState_Reset;
+  
+  TIM_OCInitStructure.TIM_Pulse = IR_Pulse;
+  
+  TIM_ITConfig(TIM1, TIM_IT_Update, ENABLE);
+  
+  TIM_OC3Init(TIM1, &TIM_OCInitStructure);  
+  /* TIM1 counter enable */
+
+}
+
+/**********************************/
+
+void RC5_cmd() {
+  TimerPeriodd = 0;
+  TIM_Cmd(TIM1, ENABLE);
+  TIM_CtrlPWMOutputs(TIM1, ENABLE);
+  
+  for(uint8_t i = 0; i < 32; i++) {     
+    while(TimerPeriodd < 600) {
+      TimerPeriodd = TIM_GetCounter(TIM1);
+    } // Wait for 1 cycle
+    while(TimerPeriodd > 600) {
+      TimerPeriodd = TIM_GetCounter(TIM1);
+    }
+  }
+  EXTI_ClearITPendingBit(EXTI_Line0);
+  EXTI_ClearFlag(EXTI_Line0);
+  
+   TIM_Cmd(TIM1, DISABLE);
+   TIM_CtrlPWMOutputs(TIM1, DISABLE);
 }
 
 /*----------------------------------------------------------------------------*/
