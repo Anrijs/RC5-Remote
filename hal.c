@@ -2,7 +2,10 @@
 
 static __IO uint32_t TimingDelay;
 void status_blink(uint8_t);
-uint8_t BlinkSpeed = 0;
+
+/*----------------------------------------------------------------------------*/
+/*                                    GPIO                                    */
+/*----------------------------------------------------------------------------*/
 
 void mx_pinout_config(void) {
   
@@ -32,6 +35,10 @@ void mx_pinout_config(void) {
   RCC_GetClocksFreq(&RCC_Clocks);
   SysTick_Config(RCC_Clocks.HCLK_Frequency / 1000);
 }
+
+/*----------------------------------------------------------------------------*/
+/*                                    USART                                   */
+/*----------------------------------------------------------------------------*/
 
 void USART2_init() {
   
@@ -64,33 +71,69 @@ void USART2_init() {
   USART_Cmd(USART2,ENABLE);
 }
 
+
+/**
+  * @brief  Sends value directly to USART2 Tx
+  * @param  ch: character/value to send to USART
+  * @retval None
+  */
 void USART2_put(uint8_t ch)
 {
+  // Disable RX while sending to avoid errors
+  USART_DirectionModeCmd(USART2,USART_Mode_Rx, DISABLE);
+  GPIO_WriteBit(STATUS_GPIO, STATUS_LED4, Bit_SET);
+ 
   USART_SendData(USART2, (uint8_t) ch);
   // Loop until the end of transmittion
   while(USART_GetFlagStatus(USART2, USART_FLAG_TC) == RESET);
+  
+  // Eanble RX after the end of transmittion
+  USART_DirectionModeCmd(USART2,USART_Mode_Rx, ENABLE);
+  GPIO_WriteBit(STATUS_GPIO, STATUS_LED4, Bit_RESET);
 }
 
+/**
+  * @brief  Returns value received from USART2 Rx
+  * @param  None
+  * @retval value from USART2
+  */
 uint8_t USART2_get(void){
   // Wait for data
   while (USART_GetFlagStatus(USART2, USART_FLAG_RXNE) == RESET);
   return USART_ReceiveData(USART2);
 }
 
+/**
+  * @brief  Sends string to USART2 Tx
+  * @param  text: string to send to USART2
+  * @retval None
+  */
 void USART2_write(char *text) {
   int i=0;
-  while(text[i]) {
+  while(text[i] || text[i] !='\0') {
     USART2_put(text[i]);
     i++;
-  } 
+  }
 }
 
+/**
+  * @brief  Sends newline to USART2 Tx
+  * @param  None
+  * @retval None
+  */
 void USART2_newline()
 {
   USART2_put('\n');
+#ifdef WINDOWS_TERMINAL
   USART2_put('\r');
+#endif
 }
 
+/**
+  * @brief  Sends integer as text to USART2 Tx
+  * @param  num: 8bit integer to convert
+  * @retval None
+  */
 void USART2_write_num(uint8_t num) {
   uint8_t text[4];
   uint8_t pos = 0;
@@ -104,8 +147,11 @@ void USART2_write_num(uint8_t num) {
   for(;pos>0;pos--) {
     USART2_put(text[pos-1]);
   }
-  ;
 }
+
+/*----------------------------------------------------------------------------*/
+/*                                    SPI                                     */
+/*----------------------------------------------------------------------------*/
 
 // this function initializes the SPI1 peripheral
 void SPI1_init(void){
@@ -187,6 +233,10 @@ void SPI1_enable() {
 void SPI1_disable() {
    GPIO_WriteBit(GPIOB, GPIO_Pin_0, Bit_RESET);
 }
+
+/*----------------------------------------------------------------------------*/
+/*                              Default functions                             */
+/*----------------------------------------------------------------------------*/
 
 /******  Default functions *******/
 /**
