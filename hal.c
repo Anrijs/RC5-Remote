@@ -9,10 +9,8 @@ TIM_OCInitTypeDef  TIM_OCInitStructure;
 uint8_t tim_irq_flag = 0;
 
 uint16_t TimerPeriod = 0;
-uint16_t TimerPeriodd = 0;
 uint16_t IR_Pulse = 0;
-uint8_t IR_cycles = 0;
-
+ 
 /*----------------------------------------------------------------------------*/
 /*                                    GPIO                                    */
 /*----------------------------------------------------------------------------*/
@@ -40,6 +38,13 @@ void mx_pinout_config(void) {
   GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
   GPIO_InitStruct.GPIO_Speed = GPIO_Speed_2MHz;
   GPIO_Init(GPIOC, &GPIO_InitStruct);
+  
+  GPIO_InitStruct.GPIO_Pin = GPIO_Pin_9;
+  GPIO_InitStruct.GPIO_Mode = GPIO_Mode_OUT;
+  GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
+  GPIO_InitStruct.GPIO_Speed = GPIO_Speed_2MHz;
+  GPIO_Init(GPIOA, &GPIO_InitStruct);
   
   /* SysTick end of count event each 1ms */
   RCC_GetClocksFreq(&RCC_Clocks);
@@ -295,14 +300,13 @@ void TIM1_init() {
   GPIO_Init(GPIOA, &GPIO_InitStructure);
   
   GPIO_PinAFConfig(GPIOA, GPIO_PinSource10, GPIO_AF_2);
-}
 
-void TIM1_config() {
-    /* Compute the value to be set in ARR regiter to generate signal frequency at 36.00 Khz */
+  /*************** CONFIGURE TIMER ********************/
+  
+  /* Compute the value to be set in ARR regiter to generate signal frequency at 36.00 Khz */
   TimerPeriod = (SystemCoreClock / 36000 ) - 1;
   /* Compute CCR3 value to generate a duty cycle at 25%  for channel 3 */
-  IR_Pulse = (uint16_t) (((uint32_t) 75 * (TimerPeriod - 1)) / 100);
-
+  IR_Pulse = (uint16_t) (((uint32_t) 25 * (TimerPeriod - 1)) / 100);
 
   /* TIM1 clock enable */
   RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM1 , ENABLE);
@@ -331,29 +335,77 @@ void TIM1_config() {
   
   TIM_OC3Init(TIM1, &TIM_OCInitStructure);  
   /* TIM1 counter enable */
-
 }
+
 
 /**********************************/
 
 void RC5_cmd() {
-  TimerPeriodd = 0;
-  TIM_Cmd(TIM1, ENABLE);
-  TIM_CtrlPWMOutputs(TIM1, ENABLE);
+  // Enable IR for transmittion
+
+  TIM_Cmd(TIM1, DISABLE);
   
+  // Send start header 110
+  RC5_bit(1);
+  RC5_bit(1);
+  RC5_bit(0);
+  
+  // Send Address (5bit)
+  RC5_bit(0);//4
+  RC5_bit(0);//5
+  RC5_bit(0);//6
+  RC5_bit(0);//7
+  RC5_bit(0);//8
+  
+  // Sent Command (6bit)
+  RC5_bit(0);//9
+  RC5_bit(0);//10
+  RC5_bit(0);//11
+  RC5_bit(0);//12
+  RC5_bit(0);//13
+  RC5_bit(1);//14
+  
+ // RC5_bit(0);
+ // RC5_bit(0);
+
+  // Disable IR after transmittion
+
+}
+
+void RC5_bit(uint8_t bit) {
+  if(bit) {
+    // High, then low halfbit
+    RC5_halfbit(0);
+    RC5_halfbit(1);
+  }
+  else {
+    RC5_halfbit(1);
+    RC5_halfbit(0);
+  }
+  
+  //TIM_CtrlPWMOutputs(TIM1, DISABLE);
+  
+  
+}
+
+void RC5_halfbit(uint8_t halfbit) {
+  uint16_t timer = 0;  
+  if(halfbit) { TIM_CtrlPWMOutputs(TIM1, ENABLE); 
+     GPIO_WriteBit(STATUS_GPIO, STATUS_LED1, Bit_SET);
+  } // 0    
+  TIM_Cmd(TIM1, ENABLE);
+
   for(uint8_t i = 0; i < 32; i++) {     
-    while(TimerPeriodd < 600) {
-      TimerPeriodd = TIM_GetCounter(TIM1);
+    while(timer < 600) {
+      timer = TIM_GetCounter(TIM1);
     } // Wait for 1 cycle
-    while(TimerPeriodd > 600) {
-      TimerPeriodd = TIM_GetCounter(TIM1);
+    while(timer > 600 && timer < TimerPeriod) {
+      timer = TIM_GetCounter(TIM1);
     }
   }
-  EXTI_ClearITPendingBit(EXTI_Line0);
-  EXTI_ClearFlag(EXTI_Line0);
-  
-   TIM_Cmd(TIM1, DISABLE);
-   TIM_CtrlPWMOutputs(TIM1, DISABLE);
+  TIM_Cmd(TIM1, DISABLE);
+  GPIO_WriteBit(STATUS_GPIO, STATUS_LED1, Bit_RESET);
+  TIM_CtrlPWMOutputs(TIM1, DISABLE);
 }
 
 /*----------------------------------------------------------------------------*/

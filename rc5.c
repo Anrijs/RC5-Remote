@@ -64,10 +64,10 @@ void rc5_mode_2() {
 
 void rc5_mode_1() {
   TIM1_init();
-  TIM1_config();
+  GPIO_WriteBit(GPIOA, GPIO_Pin_10, Bit_RESET);
   while(1) {
-    RC5_cmd();
-    Delay(2);
+    //Delay(1500);
+    //RC5_cmd();
   }
 }
 

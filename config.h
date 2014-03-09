@@ -24,6 +24,4 @@
 /* Enable for debuging in terminal */
 #define TERMINAL_DEBUG
 
-#define DELAY_TIM_FREQUENCY 1000000 /* = 1MHZ -> timer runs in microseconds */
-
 #endif
