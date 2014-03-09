@@ -10,6 +10,8 @@ uint8_t tim_irq_flag = 0;
 
 uint16_t TimerPeriod = 0;
 uint16_t IR_Pulse = 0;
+
+uint8_t command = 0x00;
  
 /*----------------------------------------------------------------------------*/
 /*                                    GPIO                                    */
@@ -75,7 +77,13 @@ void EXTI0_1_IRQHandler (void)
 {
   EXTI_ClearITPendingBit(EXTI_Line0);
   EXTI_ClearFlag(EXTI_Line0);
-  RC5_cmd();
+  while(GPIO_ReadInputDataBit(BOOT_CONFIG_GPIO, BOOT_CONFIG_PIN)) {
+    RC5_cmd(0x00, command);
+    RC5_pause();
+  }
+  command++;
+  if(command > 64) {
+    command = 0; }
 }
 
 /*----------------------------------------------------------------------------*/
@@ -340,31 +348,56 @@ void TIM1_init() {
 
 /**********************************/
 
-void RC5_cmd() {
-  // Enable IR for transmittion
-
-  TIM_Cmd(TIM1, DISABLE);
+void RC5_cmd(uint8_t addr, uint8_t cmd) {
+  // Array doesn't work correctly for some reason
+  // Bit operations will cost time and cause errorss 
+  // on the go, so values are pre-calculated
   
+  uint8_t addr1 = 0;
+  uint8_t addr2 = 0;
+  uint8_t addr3 = 0;
+  uint8_t addr4 = 0;
+  uint8_t addr5 = 0;
+  
+  uint8_t cmd1 = 0;
+  uint8_t cmd2 = 0;
+  uint8_t cmd3 = 0;
+  uint8_t cmd4 = 0;
+  uint8_t cmd5 = 0;
+  uint8_t cmd6 = 0;
+
+  addr1 = ((addr >> 0) & 0x1);
+  addr2 = ((addr >> 1) & 0x1);
+  addr3 = ((addr >> 2) & 0x1);
+  addr4 = ((addr >> 3) & 0x1);
+  addr5 = ((addr >> 4) & 0x1);
+  
+  cmd1 = ((cmd >> 0) & 0x1);
+  cmd2 = ((cmd >> 1) & 0x1);
+  cmd3 = ((cmd >> 2) & 0x1);
+  cmd4 = ((cmd >> 3) & 0x1);
+  cmd5 = ((cmd >> 4) & 0x1);
+  cmd6 = ((cmd >> 5) & 0x1);
+
+
   // Send start header 110
   RC5_bit(1);
   RC5_bit(1);
   RC5_bit(0);
   
   // Send Address (5bit)
-  RC5_bit(0);//4
-  RC5_bit(0);//5
-  RC5_bit(0);//6
-  RC5_bit(0);//7
-  RC5_bit(0);//8
+  RC5_bit(addr5);//4
+  RC5_bit(addr4);//5
+  RC5_bit(addr3);//6
+  RC5_bit(addr2);//7
+  RC5_bit(addr1);//8
   
-  // Sent Command (6bit)
-  RC5_bit(0);//9
-  RC5_bit(0);//10
-  RC5_bit(0);//11
-  RC5_bit(0);//12
-  RC5_bit(0);//13
-  RC5_bit(1);//14
-  
+  RC5_bit(cmd6);//9
+  RC5_bit(cmd5);//10
+  RC5_bit(cmd4);//11
+  RC5_bit(cmd3);//12
+  RC5_bit(cmd2);//13
+  RC5_bit(cmd1);//14
  // RC5_bit(0);
  // RC5_bit(0);
 
@@ -373,7 +406,7 @@ void RC5_cmd() {
 }
 
 void RC5_bit(uint8_t bit) {
-  if(bit) {
+  if(bit > 0) {
     // High, then low halfbit
     RC5_halfbit(0);
     RC5_halfbit(1);
@@ -406,6 +439,12 @@ void RC5_halfbit(uint8_t halfbit) {
   TIM_Cmd(TIM1, DISABLE);
   GPIO_WriteBit(STATUS_GPIO, STATUS_LED1, Bit_RESET);
   TIM_CtrlPWMOutputs(TIM1, DISABLE);
+}
+
+void RC5_pause() {
+  for(uint8_t i = 0; i<RC5_PAUSE;i++) {
+    RC5_halfbit(0);
+  }
 }
 
 /*----------------------------------------------------------------------------*/

@@ -2,6 +2,11 @@
 #define __CONFIG_H
 
 /*** RC5 HW Config ***/
+// Pause between transmittions
+// (t = RC5_pause * 445us)
+// Optimal: 100-120, MAX 255
+#define RC5_PAUSE 100
+
 
 /* Status LEDs */
 #define STATUS_GPIO GPIOC

@@ -14,9 +14,10 @@ void mx_pinout_config(void);
 void TIM1_init();
 void TIM1_config();
 
-void RC5_cmd();
+void RC5_cmd(uint8_t addr, uint8_t cmd);
 void RC5_bit(uint8_t bit);
 void RC5_halfbit(uint8_t bit);
+void RC5_pause();
 
 void SPI1_init();     // Initialize SPI1
 void SPI1_enable();   // Enable chip on SPI1                   
