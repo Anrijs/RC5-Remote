@@ -239,4 +239,104 @@ void post_remote_data(void) {
   FLASH_Lock(); 
 }
 
+/*----------------------------------------------------------------------------*/
+/*                               RC5 Hardware                                 */
+/*----------------------------------------------------------------------------*/
+
+// Send RC5 command to address
+void RC5_cmd(uint8_t addr, uint8_t cmd) {
+  // Array doesn't work correctly for some reason
+  // Bit operations will cost time and cause errorss 
+  // on the go, so values are pre-calculated
+  
+  uint8_t addr1 = 0;
+  uint8_t addr2 = 0;
+  uint8_t addr3 = 0;
+  uint8_t addr4 = 0;
+  uint8_t addr5 = 0;
+  
+  uint8_t cmd1 = 0;
+  uint8_t cmd2 = 0;
+  uint8_t cmd3 = 0;
+  uint8_t cmd4 = 0;
+  uint8_t cmd5 = 0;
+  uint8_t cmd6 = 0;
+
+  
+  addr1 = ((addr >> 0) & 0x1);
+  addr2 = ((addr >> 1) & 0x1);
+  addr3 = ((addr >> 2) & 0x1);
+  addr4 = ((addr >> 3) & 0x1);
+  addr5 = ((addr >> 4) & 0x1);
+  
+  cmd1 = ((cmd >> 0) & 0x1);
+  cmd2 = ((cmd >> 1) & 0x1);
+  cmd3 = ((cmd >> 2) & 0x1);
+  cmd4 = ((cmd >> 3) & 0x1);
+  cmd5 = ((cmd >> 4) & 0x1);
+  cmd6 = ((cmd >> 5) & 0x1);
+
+  // Send start header (3bit)
+  RC5_bit(1);
+  RC5_bit(1);
+  RC5_bit(toggle);
+  
+  // Send Address (5bit)
+  RC5_bit(addr5);//4
+  RC5_bit(addr4);//5
+  RC5_bit(addr3);//6
+  RC5_bit(addr2);//7
+  RC5_bit(addr1);//8
+  
+  // Send Command (6bit)
+  RC5_bit(cmd6);//9
+  RC5_bit(cmd5);//10
+  RC5_bit(cmd4);//11
+  RC5_bit(cmd3);//12
+  RC5_bit(cmd2);//13
+  RC5_bit(cmd1);//14
+
+}
+
+// Send bit via IR
+void RC5_bit(uint8_t bit) {
+  if(bit > 0) {
+    RC5_halfbit(0);
+    RC5_halfbit(1);
+  }
+  else {
+    RC5_halfbit(1);
+    RC5_halfbit(0);
+  } 
+}
+
+// Half of one bit
+void RC5_halfbit(uint8_t halfbit) {
+  uint16_t timer = 0;  
+  if(halfbit) { TIM_CtrlPWMOutputs(TIM1, ENABLE); 
+     GPIO_WriteBit(STATUS_GPIO, STATUS_LED1, Bit_SET);
+  }   
+  TIM_Cmd(TIMER_TIM, ENABLE);
+
+  for(uint8_t i = 0; i < 32; i++) {   
+    // Wait for 1 cycle (32 peaks)
+    while(timer < 600) {
+      timer = TIM_GetCounter(TIMER_TIM);
+    } 
+    while(timer > 600 && timer < TimerPeriod) {
+      timer = TIM_GetCounter(TIMER_TIM);
+    }
+  }
+  TIM_Cmd(TIMER_TIM, DISABLE);
+  GPIO_WriteBit(STATUS_GPIO, STATUS_LED1, Bit_RESET);
+  TIM_CtrlPWMOutputs(TIMER_TIM, DISABLE);
+}
+
+// Pause between RC5 command sending
+void RC5_pause() {
+  for(uint8_t i = 0; i<RC5_PAUSE;i++) {
+    RC5_halfbit(0);
+  }
+}
+
 

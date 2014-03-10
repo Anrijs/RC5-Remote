@@ -1,17 +1,13 @@
 #include "hal.h"
 
 static __IO uint32_t TimingDelay;
-void status_blink(uint8_t);
 
 TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
 TIM_OCInitTypeDef  TIM_OCInitStructure;
 
-uint8_t tim_irq_flag = 0;
-
-uint16_t TimerPeriod = 0;
 uint16_t IR_Pulse = 0;
-
-uint8_t command = 0x00;
+uint16_t TimerPeriod = 0;
+uint8_t toggle = 0x00;
  
 /*----------------------------------------------------------------------------*/
 /*                                    GPIO                                    */
@@ -19,41 +15,38 @@ uint8_t command = 0x00;
 
 void mx_pinout_config(void) {
   
-  RCC_APB2PeriphClockCmd(RCC_APB2Periph_SPI1, ENABLE);
+  //RCC_APB2PeriphClockCmd(RCC_APB2Periph_SPI1, ENABLE);
   RCC_ClocksTypeDef RCC_Clocks;
 
   GPIO_InitTypeDef GPIO_InitStruct;
   RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA, ENABLE);
-  GPIO_PinAFConfig(GPIOA, GPIO_PinSource2, GPIO_AF_1);
-  GPIO_PinAFConfig(GPIOA, GPIO_PinSource3, GPIO_AF_1);
+
+  
+  /**************************  INPUT  **************************/
+  
   /*Enable or disable the AHB peripheral clock */
   RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA|RCC_AHBPeriph_GPIOC, ENABLE);
   /*Configure GPIO pin */
-  GPIO_InitStruct.GPIO_Pin = GPIO_Pin_0;
+  GPIO_InitStruct.GPIO_Pin = BUTTON_START | BUTTON_STOP | BUTTON_1 | BUTTON_2 | BUTTON_3 | BUTTON_4 | BUTTON_5 | BUTTON_6;
   GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN;
-  GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_Init(GPIOA, &GPIO_InitStruct);
-  /*Configure GPIO pin */
-  GPIO_InitStruct.GPIO_Pin = GPIO_Pin_8|GPIO_Pin_9;
-  GPIO_InitStruct.GPIO_Mode = GPIO_Mode_OUT;
-  GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_InitStruct.GPIO_Speed = GPIO_Speed_2MHz;
-  GPIO_Init(GPIOC, &GPIO_InitStruct);
+  GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_DOWN;
+  GPIO_Init(BUTTON_GPIO, &GPIO_InitStruct);
   
-  GPIO_InitStruct.GPIO_Pin = GPIO_Pin_9;
+  //*************************  OUTPUT  *************************/
+  /*Configure GPIO pin */
+  GPIO_InitStruct.GPIO_Pin = STATUS_LED1 | STATUS_LED2  |STATUS_LED3 | STATUS_LED4;
   GPIO_InitStruct.GPIO_Mode = GPIO_Mode_OUT;
   GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
   GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
   GPIO_InitStruct.GPIO_Speed = GPIO_Speed_2MHz;
-  GPIO_Init(GPIOA, &GPIO_InitStruct);
+  GPIO_Init(STATUS_GPIO, &GPIO_InitStruct);
   
   /* SysTick end of count event each 1ms */
   RCC_GetClocksFreq(&RCC_Clocks);
   SysTick_Config(RCC_Clocks.HCLK_Frequency / 1000);
   
   /* Connect EXTI0 Line to PA0 pin */
-  SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOA, EXTI_PinSource0);
+  SYSCFG_EXTILineConfig(EXTI0_GPIO, EXTI_PinSource0);
   
   /* Set up interrupts */
   EXTI_InitTypeDef   EXTI_InitStructure;
@@ -73,17 +66,65 @@ void mx_pinout_config(void) {
   NVIC_Init(&NVIC_InitStructure);
 }
 
+// IRQ Handler for buttons
 void EXTI0_1_IRQHandler (void)
 {
+  
+  if(GPIO_ReadInputDataBit(BUTTON_GPIO, BUTTON_START)) {
+    while(GPIO_ReadInputDataBit(BUTTON_GPIO, BUTTON_START)) {
+      RC5_cmd(0x00,0x01);
+      RC5_pause();
+    }
+  }
+  else if(GPIO_ReadInputDataBit(BUTTON_GPIO, BUTTON_STOP)) {
+    while(GPIO_ReadInputDataBit(BUTTON_GPIO, BUTTON_STOP)) {
+      RC5_cmd(0x00,0x02);
+      RC5_pause();
+    }
+  }
+  else if(GPIO_ReadInputDataBit(BUTTON_GPIO, BUTTON_1)) {
+    while(GPIO_ReadInputDataBit(BUTTON_GPIO, BUTTON_1)) {
+      RC5_cmd(0x00,0x03);
+      RC5_pause();
+    }
+  }
+  else if(GPIO_ReadInputDataBit(BUTTON_GPIO, BUTTON_2)) {
+    while(GPIO_ReadInputDataBit(BUTTON_GPIO, BUTTON_2)) {
+      RC5_cmd(0x00,0x04);
+      RC5_pause();
+    }
+  }
+  else if(GPIO_ReadInputDataBit(BUTTON_GPIO, BUTTON_3)) {
+    while(GPIO_ReadInputDataBit(BUTTON_GPIO, BUTTON_3)) {
+      RC5_cmd(0x00,0x05);
+      RC5_pause();
+    }
+  }
+  else if(GPIO_ReadInputDataBit(BUTTON_GPIO, BUTTON_4)) {
+    while(GPIO_ReadInputDataBit(BUTTON_GPIO, BUTTON_4)) {
+      RC5_cmd(0x00,0x06);
+      RC5_pause();
+    }
+  }
+  else if(GPIO_ReadInputDataBit(BUTTON_GPIO, BUTTON_5)) {
+    while(GPIO_ReadInputDataBit(BUTTON_GPIO, BUTTON_5)) {
+      RC5_cmd(0x00,0x07);
+      RC5_pause();
+    }
+  }
+  else if(GPIO_ReadInputDataBit(BUTTON_GPIO, BUTTON_6)) {
+    while(GPIO_ReadInputDataBit(BUTTON_GPIO, BUTTON_6)) {
+      RC5_cmd(0x00,0x08);
+      RC5_pause();
+    }
+  }
+  
+  toggle++;
+  if(toggle > 1) {
+    toggle = 0; }
+  
   EXTI_ClearITPendingBit(EXTI_Line0);
   EXTI_ClearFlag(EXTI_Line0);
-  while(GPIO_ReadInputDataBit(BOOT_CONFIG_GPIO, BOOT_CONFIG_PIN)) {
-    RC5_cmd(0x00, command);
-    RC5_pause();
-  }
-  command++;
-  if(command > 64) {
-    command = 0; }
 }
 
 /*----------------------------------------------------------------------------*/
@@ -208,6 +249,7 @@ void USART2_write_num(uint8_t num) {
 /*                                    SPI                                     */
 /*----------------------------------------------------------------------------*/
 
+#ifdef NRF
 // this function initializes the SPI1 peripheral
 void SPI1_init(void){
   
@@ -289,6 +331,8 @@ void SPI1_disable() {
    GPIO_WriteBit(GPIOB, GPIO_Pin_0, Bit_RESET);
 }
 
+#endif
+
 /*----------------------------------------------------------------------------*/
 /*                              TIM1 functions                                */
 /*----------------------------------------------------------------------------*/
@@ -297,17 +341,17 @@ void TIM1_init() {
   GPIO_InitTypeDef GPIO_InitStructure;
 
   /* GPIOA Clocks enable */
-  RCC_AHBPeriphClockCmd( RCC_AHBPeriph_GPIOA, ENABLE);
+  RCC_AHBPeriphClockCmd( TIMER_RCC_GPIO, ENABLE);
   
   /* GPIOA Configuration: Channel 1, 2, 3 and 4 as alternate function push-pull */
-  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10;
+  GPIO_InitStructure.GPIO_Pin = TIMER_LED_PIN;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP ;
-  GPIO_Init(GPIOA, &GPIO_InitStructure);
+  GPIO_Init(TIMER_GPIO, &GPIO_InitStructure);
   
-  GPIO_PinAFConfig(GPIOA, GPIO_PinSource10, GPIO_AF_2);
+  GPIO_PinAFConfig(TIMER_GPIO, TIMER_PIN_SOURCE, GPIO_AF_2);
 
   /*************** CONFIGURE TIMER ********************/
   
@@ -317,7 +361,7 @@ void TIM1_init() {
   IR_Pulse = (uint16_t) (((uint32_t) 25 * (TimerPeriod - 1)) / 100);
 
   /* TIM1 clock enable */
-  RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM1 , ENABLE);
+  RCC_APB2PeriphClockCmd(TIMER_RCC_TIM , ENABLE);
   
   /* Time Base configuration */
   TIM_TimeBaseStructure.TIM_Prescaler = 0;
@@ -326,7 +370,7 @@ void TIM1_init() {
   TIM_TimeBaseStructure.TIM_ClockDivision = 0;
   TIM_TimeBaseStructure.TIM_RepetitionCounter = 0;
 
-  TIM_TimeBaseInit(TIM1, &TIM_TimeBaseStructure);
+  TIM_TimeBaseInit(TIMER_TIM, &TIM_TimeBaseStructure);
 
   /* Channel 1, 2, 3 and 4 Configuration in PWM mode */
   TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM1;
@@ -339,112 +383,11 @@ void TIM1_init() {
   
   TIM_OCInitStructure.TIM_Pulse = IR_Pulse;
   
-  TIM_ITConfig(TIM1, TIM_IT_Update, ENABLE);
-  
-  TIM_OC3Init(TIM1, &TIM_OCInitStructure);  
+  TIM_ITConfig(TIMER_TIM, TIM_IT_Update, ENABLE);
+
+  TIM_OC_CH(TIMER_TIM, &TIM_OCInitStructure);  
+
   /* TIM1 counter enable */
-}
-
-
-/**********************************/
-
-void RC5_cmd(uint8_t addr, uint8_t cmd) {
-  // Array doesn't work correctly for some reason
-  // Bit operations will cost time and cause errorss 
-  // on the go, so values are pre-calculated
-  
-  uint8_t addr1 = 0;
-  uint8_t addr2 = 0;
-  uint8_t addr3 = 0;
-  uint8_t addr4 = 0;
-  uint8_t addr5 = 0;
-  
-  uint8_t cmd1 = 0;
-  uint8_t cmd2 = 0;
-  uint8_t cmd3 = 0;
-  uint8_t cmd4 = 0;
-  uint8_t cmd5 = 0;
-  uint8_t cmd6 = 0;
-
-  addr1 = ((addr >> 0) & 0x1);
-  addr2 = ((addr >> 1) & 0x1);
-  addr3 = ((addr >> 2) & 0x1);
-  addr4 = ((addr >> 3) & 0x1);
-  addr5 = ((addr >> 4) & 0x1);
-  
-  cmd1 = ((cmd >> 0) & 0x1);
-  cmd2 = ((cmd >> 1) & 0x1);
-  cmd3 = ((cmd >> 2) & 0x1);
-  cmd4 = ((cmd >> 3) & 0x1);
-  cmd5 = ((cmd >> 4) & 0x1);
-  cmd6 = ((cmd >> 5) & 0x1);
-
-
-  // Send start header 110
-  RC5_bit(1);
-  RC5_bit(1);
-  RC5_bit(0);
-  
-  // Send Address (5bit)
-  RC5_bit(addr5);//4
-  RC5_bit(addr4);//5
-  RC5_bit(addr3);//6
-  RC5_bit(addr2);//7
-  RC5_bit(addr1);//8
-  
-  RC5_bit(cmd6);//9
-  RC5_bit(cmd5);//10
-  RC5_bit(cmd4);//11
-  RC5_bit(cmd3);//12
-  RC5_bit(cmd2);//13
-  RC5_bit(cmd1);//14
- // RC5_bit(0);
- // RC5_bit(0);
-
-  // Disable IR after transmittion
-
-}
-
-void RC5_bit(uint8_t bit) {
-  if(bit > 0) {
-    // High, then low halfbit
-    RC5_halfbit(0);
-    RC5_halfbit(1);
-  }
-  else {
-    RC5_halfbit(1);
-    RC5_halfbit(0);
-  }
-  
-  //TIM_CtrlPWMOutputs(TIM1, DISABLE);
-  
-  
-}
-
-void RC5_halfbit(uint8_t halfbit) {
-  uint16_t timer = 0;  
-  if(halfbit) { TIM_CtrlPWMOutputs(TIM1, ENABLE); 
-     GPIO_WriteBit(STATUS_GPIO, STATUS_LED1, Bit_SET);
-  } // 0    
-  TIM_Cmd(TIM1, ENABLE);
-
-  for(uint8_t i = 0; i < 32; i++) {     
-    while(timer < 600) {
-      timer = TIM_GetCounter(TIM1);
-    } // Wait for 1 cycle
-    while(timer > 600 && timer < TimerPeriod) {
-      timer = TIM_GetCounter(TIM1);
-    }
-  }
-  TIM_Cmd(TIM1, DISABLE);
-  GPIO_WriteBit(STATUS_GPIO, STATUS_LED1, Bit_RESET);
-  TIM_CtrlPWMOutputs(TIM1, DISABLE);
-}
-
-void RC5_pause() {
-  for(uint8_t i = 0; i<RC5_PAUSE;i++) {
-    RC5_halfbit(0);
-  }
 }
 
 /*----------------------------------------------------------------------------*/
