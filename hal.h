@@ -10,8 +10,10 @@ void TimingDelay_Decrement(void);
 void Delay(__IO uint32_t nTime);
 void mx_pinout_config(void);
 
+void exti_init();
+
 void TIM1_init();
-void TIM1_config();
+void RC5_toggle_bit();
 
 #ifdef NRF
 void SPI1_init();     // Initialize SPI1

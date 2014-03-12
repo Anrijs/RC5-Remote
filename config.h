@@ -5,16 +5,10 @@
 // Pause between transmittions
 // (t = RC5_pause * 445us)
 // Optimal: 100-120, MAX 255
-#define RC5_PAUSE 100
+// Tested and working from: 60
+#define RC5_PAUSE 60
 
 /* Timers */
-
-#define TIMER_TIM TIM1
-#define TIMER_RCC_GPIO RCC_AHBPeriph_GPIOA
-#define TIMER_RCC_TIM RCC_APB2Periph_TIM1
-#define TIMER_LED_PIN GPIO_Pin_10
-#define TIMER_GPIO GPIOA
-#define TIMER_PIN_SOURCE GPIO_PinSource10
 
 #define TIM_OC_CH TIM_OC1Init
 
